@@ -1,10 +1,9 @@
 import Highcharts from 'highcharts/highstock';
 import HighchartsReact from 'highcharts-react-official';
-import { useMemo, useState } from 'react';
+import { ChangeEvent, useMemo, useState } from 'react';
 import useSWR from 'swr';
 import axios from 'axios';
 import indicators from 'highcharts/indicators/indicators-all.js';
-import { title } from 'process';
 
 indicators(Highcharts);
 
@@ -13,9 +12,48 @@ const fetcher = (url: string) => axios.get(url).then((res) => res.data);
 function App() {
   const [symbol, setSymbol] = useState('2603');
   const [from] = useState('2019-01-01');
+  const [isAdjested, setIsAdjested] = useState(false);
+  const [isBB, setIsBB] = useState(false);
 
   const adjestedCandlesUrl = `/api/adjested/candles/${symbol}?from=${from}`;
   const originalCandlesUrl = `/api/original/candles/${symbol}?from=${from}`;
+
+  const handleIsAdjestedChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setIsAdjested(event.target.checked);
+  };
+
+  const handleIsBBChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setIsBB(event.target.checked);
+  };
+
+  const getSeries = () => {
+    const series = [
+      {
+        type: 'candlestick',
+        id: 'ohlc',
+        name: 'Stock Price',
+        data: isAdjested ? adjestedCandlesMemo.ohlc : originalCandlesMemo.ohlc,
+      },
+      {
+        type: 'column',
+        id: 'volume',
+        name: 'Volume',
+        data: isAdjested
+          ? adjestedCandlesMemo.volume
+          : originalCandlesMemo.volume,
+        yAxis: 1,
+      },
+    ];
+
+    if (!isBB) return series;
+    return [
+      ...series,
+      {
+        type: 'bb',
+        linkedTo: 'ohlc',
+      },
+    ];
+  };
 
   const {
     data: adjestedCandles,
@@ -173,79 +211,31 @@ function App() {
       </form>
       <div
         style={{
-          height: '50vh',
+          height: '70vh',
           width: '100vw',
           margin: 'auto',
         }}
       >
         <h3>symbol: {symbol}</h3>
+        <label>
+          <input
+            type="checkbox"
+            checked={isAdjested}
+            onChange={handleIsAdjestedChange}
+          />
+          還原股價
+        </label>
+        <label>
+          <input type="checkbox" checked={isBB} onChange={handleIsBBChange} />
+          布林通道
+        </label>
         <HighchartsReact
           containerProps={{ style: { height: '100%' } }}
           highcharts={Highcharts}
           constructorType={'stockChart'}
           options={{
             ...templateOptions,
-            title: {
-              text: "original"
-            },
-            series: [
-              {
-                type: 'candlestick',
-                id: 'ohlc',
-                name: 'Stock Price',
-                data: originalCandlesMemo.ohlc,
-              },
-              {
-                type: 'column',
-                id: 'volume',
-                name: 'Volume',
-                data: originalCandlesMemo.volume,
-                yAxis: 1,
-              },
-              {
-                type: 'bb',
-                linkedTo: 'ohlc',
-              },
-            ],
-          }}
-        />
-      </div>
-      <div
-        style={{
-          height: '50vh',
-          width: '100vw',
-          margin: 'auto',
-        }}
-      >
-        <h3>symbol: {symbol}</h3>
-        <HighchartsReact
-          containerProps={{ style: { height: '100%' } }}
-          highcharts={Highcharts}
-          constructorType={'stockChart'}
-          options={{
-            ...templateOptions,
-            title: {
-              text: 'adjected'
-            },
-            series: [
-              {
-                type: 'candlestick',
-                id: 'ohlc',
-                name: 'Stock Price',
-                data: adjestedCandlesMemo.ohlc,
-              },
-              {
-                type: 'column',
-                id: 'volume',
-                name: 'Volume',
-                data: adjestedCandlesMemo.volume,
-                yAxis: 1,
-              },
-              {
-                type: 'bb',
-                linkedTo: 'ohlc',
-              },
-            ],
+            series: getSeries(),
           }}
         />
       </div>
