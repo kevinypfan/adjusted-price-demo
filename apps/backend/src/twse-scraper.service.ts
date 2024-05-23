@@ -98,6 +98,11 @@ export class TwseScraperService {
       data.openingReferencePrice = numeral(values[4]).value();
       data.rightsIssueReferencePrice = numeral(values[5]).value();
       data.capitalReductionReason = values[6].trim();
+      const [_, detailDate] = values[7].split(',');
+      data.detailMeta = {
+        symbol,
+        date: detailDate,
+      };
 
       return data;
     }) as Record<string, any>[];
@@ -105,6 +110,35 @@ export class TwseScraperService {
     await this.cacheManager.set(url, data);
 
     return symbol ? data.filter((data) => data.symbol === symbol) : data;
+  }
+
+  async fetchStockCapitalReductionDetail(symbol: string, date: string) {
+    const query = new URLSearchParams({
+      STK_NO: symbol,
+      FILE_DATE: DateTime.fromISO(date).toFormat('yyyyMMdd'),
+      response: 'json',
+    });
+    const url = `https://www.twse.com.tw/rwd/zh/reducation/TWTAVUDetail?${query}`;
+
+    const cacheData = await this.cacheManager.get<Record<string, any>>(url);
+    if (cacheData) return cacheData;
+
+    const response = await firstValueFrom(this.httpService.get(url));
+    const json = response.data.stat === 'OK' && response.data;
+    if (!json) return null;
+
+    const [_, name, ...values] = json.data[0];
+    const [year, month, day] = values[0].split('/');
+
+    const data: Record<string, any> = {};
+
+    data.symbol = symbol;
+    data.stockName = name.trim();
+    data.stopTradingDate = `${+year + 1911}-${month}-${day}`;
+    data.newSharesPerThousand = parseFloat(values[1]);
+    data.refundPerShare = parseFloat(values[2]);
+
+    return data;
   }
 
   async fetchStocksRightsAndDividend(options: {
@@ -119,7 +153,6 @@ export class TwseScraperService {
       response: 'json',
     });
     const url = `https://wwwc.twse.com.tw/rwd/zh/exRight/TWT49U?${query}`;
-
     const cacheData = await this.cacheManager.get<Record<string, any>[]>(url);
     if (cacheData)
       return symbol
@@ -156,7 +189,11 @@ export class TwseScraperService {
       data.lowerLimitPrice = numeral(values[5]).value();
       data.openingReferencePrice = numeral(values[6]).value();
       data.referencePriceAfterDividendDeduction = numeral(values[7]).value();
-
+      const [_, detailDate] = values[8].split(',');
+      data.detailMeta = {
+        symbol,
+        date: detailDate,
+      };
       return data;
     }) as Record<string, any>[];
 
@@ -172,14 +209,14 @@ export class TwseScraperService {
       response: 'json',
     });
     const url = `https://wwwc.twse.com.tw/rwd/zh/exRight/TWT49UDetail?${query}`;
-
     const cacheData = await this.cacheManager.get<Record<string, any>>(url);
     if (cacheData) return cacheData;
 
     const response = await firstValueFrom(this.httpService.get(url));
-    const json = response.data.stat === 'ok' && response.data;
-    if (!json) return null;
 
+    const json = response.data.stat === 'ok' && response.data;
+
+    if (!json) return null;
     const [_, name, ...values] = json.data[0];
     const data: Record<string, any> = {};
 

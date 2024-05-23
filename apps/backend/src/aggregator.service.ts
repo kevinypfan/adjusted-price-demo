@@ -40,14 +40,28 @@ export class AggregatorService {
 
     const capitalReduction =
       await this.twseScraperService.fetchStocksCapitalReduction(options);
-
     for (const cr of capitalReduction) {
+      const detail =
+        await this.twseScraperService.fetchStockCapitalReductionDetail(
+          cr.detailMeta.symbol,
+          cr.detailMeta.date
+        );
+
+      // (昨收 - 每股退還股款) / ( 1 - (1000 - 每一仟股換發新股票) / 1000)
+      const referencePrice = Decimal.div(
+        Decimal.sub(cr.lastClosingPrice, detail.refundPerShare),
+        Decimal.sub(
+          1,
+          Decimal.div(Decimal.sub(1000, detail.newSharesPerThousand), 1000)
+        )
+      );
+
       rates.push({
         date: cr.resumptionDate,
         rate: Decimal.sub(
           1,
           Decimal.div(
-            Decimal.sub(cr.lastClosingPrice, cr.referencePrice),
+            Decimal.sub(cr.lastClosingPrice, referencePrice),
             cr.lastClosingPrice
           )
         ),
@@ -59,8 +73,8 @@ export class AggregatorService {
     for (const rd of rightsAndDividend) {
       const detail =
         await this.twseScraperService.fetchStockRightsAndDividendDetail(
-          rd.symbol,
-          rd.resumptionDate
+          rd.detailMeta.symbol,
+          rd.detailMeta.date
         );
       if (detail.dividendPerShare) {
         const rate = {
