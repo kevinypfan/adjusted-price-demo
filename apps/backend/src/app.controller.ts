@@ -3,15 +3,18 @@ import {
   Get,
   Inject,
   Logger,
+  NotFoundException,
   Param,
   Query,
   UseInterceptors,
 } from '@nestjs/common';
-import { FugleApiService } from './fugle-api.service';
+import { FugleApiService } from './services/fugle-api.service';
 import { GetCandles } from './dto/get-candles.dto';
-import { AggregatorService } from './aggregator.service';
+import { TwseAggregatorService } from './services/twse-aggregator.service';
 import { CACHE_MANAGER, CacheInterceptor, Cache } from '@nestjs/cache-manager';
 import { Cron } from '@nestjs/schedule';
+import { TpexAggregatorService } from './services/tpex-aggregator.service';
+import { Exchange } from './enums/exchange.enum';
 
 @Controller()
 @UseInterceptors(CacheInterceptor)
@@ -21,8 +24,14 @@ export class AppController {
   constructor(
     @Inject(CACHE_MANAGER) private cacheManager: Cache,
     private readonly fugleApiService: FugleApiService,
-    private readonly aggregatorService: AggregatorService,
+    private readonly twseAggregatorService: TwseAggregatorService,
+    private readonly tpexAggregatorService: TpexAggregatorService
   ) {}
+
+  @Get('ticker/:symbol')
+  getTicker(@Param('symbol') symbol) {
+    return this.fugleApiService.getTicker(symbol);
+  }
 
   @Get('original/candles/:symbol')
   getOriginalCandles(@Param('symbol') symbol, @Query() query: GetCandles) {
@@ -30,12 +39,27 @@ export class AppController {
   }
 
   @Get('adjested/candles/:symbol')
-  getAdjestedCandles(@Param('symbol') symbol, @Query() query: GetCandles) {
-    return this.aggregatorService.getAdjustedCandles(
-      symbol,
-      query.from,
-      query.to,
-    );
+  async getAdjestedCandles(
+    @Param('symbol') symbol,
+    @Query() query: GetCandles
+  ) {
+    const ticker = await this.fugleApiService.getTicker(symbol);
+
+    if (ticker.exchange === Exchange.TWSE) {
+      return this.twseAggregatorService.getAdjustedCandles(
+        symbol,
+        query.from,
+        query.to
+      );
+    } else if (ticker.exchange === Exchange.TPEx) {
+      return this.tpexAggregatorService.getAdjustedCandles(
+        symbol,
+        query.from,
+        query.to
+      );
+    } else {
+      throw new NotFoundException();
+    }
   }
 
   @Cron('0 0 0 * * *')

@@ -5,7 +5,7 @@ import { FugleApiService } from './fugle-api.service';
 import Decimal from 'decimal.js';
 
 @Injectable()
-export class AggregatorService {
+export class TwseAggregatorService {
   constructor(
     private readonly twseScraperService: TwseScraperService,
     private readonly fugleApiService: FugleApiService

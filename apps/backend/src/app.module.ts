@@ -3,11 +3,13 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { HttpModule } from '@nestjs/axios';
-import { TwseScraperService } from './twse-scraper.service';
-import { AggregatorService } from './aggregator.service';
-import { FugleApiService } from './fugle-api.service';
+import { TwseScraperService } from './services/twse-scraper.service';
+import { TwseAggregatorService } from './services/twse-aggregator.service';
+import { FugleApiService } from './services/fugle-api.service';
 import { CacheModule } from '@nestjs/cache-manager';
 import { ScheduleModule } from '@nestjs/schedule';
+import { TpexScraperService } from './services/tpex-scraper.service';
+import { TpexAggregatorService } from './services/tpex-aggregator.service';
 
 @Module({
   imports: [
@@ -21,6 +23,12 @@ import { ScheduleModule } from '@nestjs/schedule';
     }),
   ],
   controllers: [AppController],
-  providers: [TwseScraperService, AggregatorService, FugleApiService],
+  providers: [
+    TwseScraperService,
+    TwseAggregatorService,
+    TpexScraperService,
+    TpexAggregatorService,
+    FugleApiService,
+  ],
 })
 export class AppModule {}

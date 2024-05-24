@@ -15,6 +15,7 @@ function App() {
   const [isAdjested, setIsAdjested] = useState(false);
   const [isBB, setIsBB] = useState(false);
 
+  const tickerUrl = `/api/ticker/${symbol}`;
   const adjestedCandlesUrl = `/api/adjested/candles/${symbol}?from=${from}`;
   const originalCandlesUrl = `/api/original/candles/${symbol}?from=${from}`;
 
@@ -54,6 +55,13 @@ function App() {
       },
     ];
   };
+
+  const {
+    data: ticker,
+    error: tickerError,
+    isLoading: tickerLoading,
+    mutate: tickerMutate,
+  } = useSWR(tickerUrl, fetcher);
 
   const {
     data: adjestedCandles,
@@ -207,7 +215,7 @@ function App() {
         <label htmlFor="symbol">symbol: </label>
         <input type="text" name="symbol" />
         {/* <input type="date" name="from" /> */}
-        <button type="submit">submit</button>
+        <button style={{ marginLeft: '8px'}} type="submit">submit</button>
       </form>
       <div
         style={{
@@ -216,7 +224,12 @@ function App() {
           margin: 'auto',
         }}
       >
-        <h3>symbol: {symbol}</h3>
+        <h3>
+          {ticker?.name} ({symbol})
+          {ticker?.exchange === 'TWSE' && <span style={{fontSize: '16px', marginLeft: '8px'}}>上市</span>}
+          {ticker?.exchange === 'TPEx' && <span style={{fontSize: '16px', marginLeft: '8px'}}>上櫃</span>}
+        </h3>
+
         <label>
           <input
             type="checkbox"
@@ -225,7 +238,7 @@ function App() {
           />
           還原股價
         </label>
-        <label>
+        <label style={{ marginLeft: '8px'}}>
           <input type="checkbox" checked={isBB} onChange={handleIsBBChange} />
           布林通道
         </label>

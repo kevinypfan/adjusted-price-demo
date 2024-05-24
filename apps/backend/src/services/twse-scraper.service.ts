@@ -2,7 +2,7 @@ import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import numeral from 'numeral';
 import { DateTime } from 'luxon';
-import { Exchange } from './enums/exchange.enum';
+import { Exchange } from '../enums/exchange.enum';
 import { firstValueFrom } from 'rxjs';
 import { CACHE_MANAGER, Cache } from '@nestjs/cache-manager';
 
